@@ -677,6 +677,116 @@ body {
 }
 
 /* ============================================
+   SEARCH SECTION
+   ============================================ */
+
+.search-section {
+    margin-bottom: 20px;
+}
+
+.search-input-wrapper {
+    display: flex;
+    gap: 8px;
+}
+
+.search-input-wrapper input {
+    flex: 1;
+    padding: 12px;
+    border: 2px solid var(--border);
+    background: var(--background);
+    color: var(--text);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+}
+
+.search-input-wrapper input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.search-results {
+    margin-top: 12px;
+    background: var(--background);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.search-result-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.search-result-item:last-child {
+    border-bottom: none;
+}
+
+.search-result-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.search-result-title {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.search-result-meta {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.btn-small {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+.search-loading {
+    padding: 20px;
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.search-success {
+    padding: 12px;
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid var(--success);
+    border-radius: var(--radius-sm);
+    color: var(--success);
+    font-size: 13px;
+}
+
+.search-error,
+.no-results {
+    padding: 12px;
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.divider {
+    display: flex;
+    align-items: center;
+    margin: 24px 0;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+
+.divider span {
+    padding: 0 12px;
+}
+
+/* ============================================
    ADD SHOW FORM
    ============================================ */
 
@@ -835,6 +945,132 @@ body {
 .ep-time {
     font-size: 12px;
     color: var(--text-muted);
+}
+
+/* ============================================
+   SETTINGS
+   ============================================ */
+
+.settings-container {
+    padding: 0;
+}
+
+.settings-section {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.settings-section h2 {
+    font-size: 16px;
+    margin-bottom: 8px;
+}
+
+.settings-help {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+}
+
+.streaming-services {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+
+.streaming-service-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    background: var(--background);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.streaming-service-item:hover {
+    border-color: var(--service-color, var(--primary));
+}
+
+.streaming-service-item.selected {
+    border-color: var(--service-color, var(--primary));
+    background: rgba(99, 102, 241, 0.1);
+}
+
+.streaming-service-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--service-color, var(--primary));
+}
+
+.service-name {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+/* Backup & Restore */
+.backup-actions {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.import-btn {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.backup-status {
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    margin-top: 12px;
+}
+
+.backup-status.success {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--success);
+    border: 1px solid var(--success);
+}
+
+.backup-status.error {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger);
+    border: 1px solid var(--danger);
+}
+
+/* ============================================
+   WHERE TO WATCH
+   ============================================ */
+
+.where-to-watch {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 16px 0;
+    padding: 12px;
+    background: rgba(99, 102, 241, 0.1);
+    border-radius: var(--radius-sm);
+}
+
+.watch-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.watch-service {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--service-color, var(--primary));
+    padding: 4px 12px;
+    background: var(--surface);
+    border-radius: 20px;
 }
 
 /* ============================================

@@ -20,8 +20,33 @@ const STORAGE_KEYS = {
 // DEFAULT DATA
 // ============================================
 const DEFAULT_SETTINGS = {
-    couchPotatoDuration: 360 // Default 6 hours in minutes
+    couchPotatoDuration: 360, // Default 6 hours in minutes
+    streamingServices: [] // User's streaming services
 };
+
+// ============================================
+// AVAILABLE STREAMING SERVICES
+// ============================================
+const STREAMING_SERVICES = [
+    { id: 'netflix', name: 'Netflix', color: '#E50914' },
+    { id: 'hulu', name: 'Hulu', color: '#1CE783' },
+    { id: 'prime', name: 'Prime Video', color: '#00A8E1' },
+    { id: 'disney', name: 'Disney+', color: '#113CCF' },
+    { id: 'hbo', name: 'Max (HBO)', color: '#5822B4' },
+    { id: 'peacock', name: 'Peacock', color: '#000000' },
+    { id: 'paramount', name: 'Paramount+', color: '#0064FF' },
+    { id: 'apple', name: 'Apple TV+', color: '#555555' },
+    { id: 'showtime', name: 'Showtime', color: '#FF0000' },
+    { id: 'starz', name: 'Starz', color: '#000000' },
+    { id: 'amc', name: 'AMC+', color: '#1E88E5' },
+    { id: 'discovery', name: 'Discovery+', color: '#0033A0' },
+    { id: 'espn', name: 'ESPN+', color: '#FF4747' },
+    { id: 'tubi', name: 'Tubi', color: '#FA382F' },
+    { id: 'pluto', name: 'Pluto TV', color: '#000000' },
+    { id: 'crunchyroll', name: 'Crunchyroll', color: '#F47521' },
+    { id: 'network', name: 'Network TV', color: '#666666' },
+    { id: 'cable', name: 'Cable TV', color: '#666666' }
+];
 
 // ============================================
 // DATA ACCESS FUNCTIONS
@@ -64,6 +89,9 @@ function addShow(show) {
     const newShow = {
         id: generateId(),
         title: show.title,
+        network: show.network || null, // Original network (e.g., "AMC")
+        webChannel: show.webChannel || null, // Streaming platform (e.g., "Netflix")
+        streamingServices: show.streamingServices || [], // Where it's available to stream
         episodes: show.episodes.map((ep, index) => ({
             id: generateId(),
             season: ep.season,
@@ -189,6 +217,116 @@ function updateSettings(updates) {
     const settings = getSettings();
     const newSettings = { ...settings, ...updates };
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(newSettings));
+}
+
+// ============================================
+// BACKUP & RESTORE FUNCTIONS
+// ============================================
+
+/**
+ * Export all app data to a JSON object
+ * @returns {Object} All app data
+ */
+function exportAllData() {
+    return {
+        version: 1, // For future compatibility
+        exportedAt: new Date().toISOString(),
+        shows: getShows(),
+        history: getHistory(),
+        settings: getSettings()
+    };
+}
+
+/**
+ * Import app data from a JSON object
+ * @param {Object} data - Previously exported data
+ * @param {boolean} merge - If true, merge with existing data; if false, replace
+ * @returns {Object} Result with success status and message
+ */
+function importAllData(data, merge = false) {
+    try {
+        // Validate data structure
+        if (!data || typeof data !== 'object') {
+            return { success: false, message: 'Invalid data format' };
+        }
+
+        // Check for required fields
+        if (!data.shows && !data.history && !data.settings) {
+            return { success: false, message: 'No valid data found in file' };
+        }
+
+        if (merge) {
+            // Merge mode: add to existing data
+            if (data.shows && Array.isArray(data.shows)) {
+                const existingShows = getShows();
+                const existingTitles = existingShows.map(s => s.title.toLowerCase());
+
+                // Only add shows that don't already exist (by title)
+                const newShows = data.shows.filter(s =>
+                    !existingTitles.includes(s.title.toLowerCase())
+                );
+
+                saveShows([...existingShows, ...newShows]);
+            }
+
+            if (data.history && Array.isArray(data.history)) {
+                const existingHistory = getHistory();
+                // Prepend new history, avoiding duplicates by ID
+                const existingIds = existingHistory.map(h => h.id);
+                const newHistory = data.history.filter(h => !existingIds.includes(h.id));
+                localStorage.setItem(STORAGE_KEYS.HISTORY,
+                    JSON.stringify([...newHistory, ...existingHistory])
+                );
+            }
+
+            if (data.settings) {
+                const existingSettings = getSettings();
+                updateSettings({ ...existingSettings, ...data.settings });
+            }
+        } else {
+            // Replace mode: overwrite existing data
+            if (data.shows && Array.isArray(data.shows)) {
+                saveShows(data.shows);
+            }
+
+            if (data.history && Array.isArray(data.history)) {
+                localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(data.history));
+            }
+
+            if (data.settings) {
+                localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(data.settings));
+            }
+        }
+
+        return {
+            success: true,
+            message: merge ? 'Data merged successfully' : 'Data imported successfully'
+        };
+    } catch (error) {
+        console.error('Import error:', error);
+        return { success: false, message: 'Failed to import data: ' + error.message };
+    }
+}
+
+/**
+ * Download data as a JSON file
+ */
+function downloadBackup() {
+    const data = exportAllData();
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const date = new Date().toISOString().split('T')[0];
+    const filename = `random-episode-picker-backup-${date}.json`;
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
 
 // ============================================

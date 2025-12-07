@@ -16,6 +16,9 @@ let currentQueueIndex = 0;
 // Currently selected show for detail modal
 let selectedShowId = null;
 
+// Temp storage for show being added from search (holds streaming info)
+let pendingShowData = null;
+
 // ============================================
 // INITIALIZATION
 // ============================================
@@ -26,12 +29,14 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeRandomPicker();
     initializeCouchPotato();
     initializeHistory();
+    initializeSettings();
     initializeModals();
 
     // Render initial state
     renderShowsList();
     renderHistory();
     loadCouchPotatoSettings();
+    renderStreamingServices();
 });
 
 // ============================================
@@ -126,6 +131,8 @@ function handleRandomize() {
     pickedContainer.classList.remove('hidden');
 
     const { show, episode } = result;
+    const whereToWatch = getWhereToWatch(show);
+
     pickedContainer.innerHTML = `
         <div class="picked-card">
             <h2 class="picked-show">${escapeHtml(show.title)}</h2>
@@ -134,6 +141,12 @@ function handleRandomize() {
                 <span class="episode-title">${escapeHtml(episode.title)}</span>
                 <span class="episode-runtime">${formatRuntime(episode.runtime)}</span>
             </div>
+            ${whereToWatch ? `
+                <div class="where-to-watch">
+                    <span class="watch-label">Watch on:</span>
+                    <span class="watch-service" style="--service-color: ${whereToWatch.color}">${whereToWatch.name}</span>
+                </div>
+            ` : ''}
             <button class="btn btn-primary mark-watched-btn"
                     data-show-id="${show.id}"
                     data-episode-id="${episode.id}">
@@ -153,6 +166,38 @@ function handleRandomize() {
         // Auto-randomize next episode
         handleRandomize();
     });
+}
+
+/**
+ * Get where to watch a show based on user's streaming services
+ * @param {Object} show - Show object
+ * @returns {Object|null} Streaming service info or null
+ */
+function getWhereToWatch(show) {
+    const settings = getSettings();
+    const userServices = settings.streamingServices || [];
+
+    if (!show.streamingServices || show.streamingServices.length === 0) {
+        return null;
+    }
+
+    // Find first match between show's services and user's services
+    for (const serviceId of show.streamingServices) {
+        if (userServices.includes(serviceId)) {
+            const service = STREAMING_SERVICES.find(s => s.id === serviceId);
+            if (service) {
+                return service;
+            }
+        }
+    }
+
+    // No match - show where it's available anyway
+    const firstService = STREAMING_SERVICES.find(s => s.id === show.streamingServices[0]);
+    if (firstService) {
+        return { ...firstService, notSubscribed: true };
+    }
+
+    return null;
 }
 
 // ============================================
@@ -398,6 +443,110 @@ function renderHistory() {
 }
 
 // ============================================
+// SETTINGS
+// ============================================
+
+function initializeSettings() {
+    // Export button
+    document.getElementById('export-data-btn').addEventListener('click', handleExportData);
+
+    // Import file input
+    document.getElementById('import-data-input').addEventListener('change', handleImportData);
+}
+
+function handleExportData() {
+    downloadBackup();
+    showBackupStatus('Data exported successfully!', 'success');
+}
+
+function handleImportData(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        try {
+            const data = JSON.parse(event.target.result);
+
+            // Ask user if they want to merge or replace
+            const merge = confirm(
+                'How do you want to import?\n\n' +
+                'OK = Merge (add to existing data)\n' +
+                'Cancel = Replace (overwrite all data)'
+            );
+
+            const result = importAllData(data, merge);
+
+            if (result.success) {
+                showBackupStatus(result.message, 'success');
+                // Refresh all views
+                renderShowsList();
+                renderHistory();
+                renderStreamingServices();
+                loadCouchPotatoSettings();
+            } else {
+                showBackupStatus(result.message, 'error');
+            }
+        } catch (error) {
+            showBackupStatus('Invalid file format', 'error');
+        }
+
+        // Clear the input so the same file can be selected again
+        e.target.value = '';
+    };
+
+    reader.readAsText(file);
+}
+
+function showBackupStatus(message, type) {
+    const statusEl = document.getElementById('backup-status');
+    statusEl.textContent = message;
+    statusEl.className = `backup-status ${type}`;
+    statusEl.classList.remove('hidden');
+
+    // Hide after 3 seconds
+    setTimeout(() => {
+        statusEl.classList.add('hidden');
+    }, 3000);
+}
+
+function renderStreamingServices() {
+    const container = document.getElementById('streaming-services');
+    const settings = getSettings();
+    const userServices = settings.streamingServices || [];
+
+    container.innerHTML = STREAMING_SERVICES.map(service => {
+        const isSelected = userServices.includes(service.id);
+        return `
+            <label class="streaming-service-item ${isSelected ? 'selected' : ''}"
+                   style="--service-color: ${service.color}">
+                <input type="checkbox"
+                       value="${service.id}"
+                       ${isSelected ? 'checked' : ''}
+                       onchange="handleServiceToggle('${service.id}', this.checked)">
+                <span class="service-name">${service.name}</span>
+            </label>
+        `;
+    }).join('');
+}
+
+function handleServiceToggle(serviceId, isChecked) {
+    const settings = getSettings();
+    let services = settings.streamingServices || [];
+
+    if (isChecked) {
+        if (!services.includes(serviceId)) {
+            services.push(serviceId);
+        }
+    } else {
+        services = services.filter(id => id !== serviceId);
+    }
+
+    updateSettings({ streamingServices: services });
+    renderStreamingServices();
+}
+
+// ============================================
 // MODALS
 // ============================================
 
@@ -425,6 +574,15 @@ function initializeModals() {
 
     // Delete show button
     document.getElementById('delete-show-btn').addEventListener('click', handleDeleteShow);
+
+    // Search functionality
+    document.getElementById('search-btn').addEventListener('click', handleShowSearch);
+    document.getElementById('show-search').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleShowSearch();
+        }
+    });
 }
 
 function closeAllModals() {
@@ -439,13 +597,141 @@ function closeAllModals() {
 function openAddShowModal() {
     document.getElementById('add-show-modal').classList.remove('hidden');
     document.getElementById('show-title').value = '';
+    document.getElementById('show-search').value = '';
     document.getElementById('episodes-input').innerHTML = '';
     document.getElementById('num-seasons').value = '';
     document.getElementById('eps-per-season').value = '';
     document.getElementById('runtime').value = '';
+    document.getElementById('search-results').classList.add('hidden');
+    document.getElementById('search-loading').classList.add('hidden');
+
+    // Clear any pending show data from previous searches
+    pendingShowData = null;
 
     // Add one initial episode input
     addEpisodeInput();
+}
+
+// ============================================
+// TV SHOW SEARCH
+// ============================================
+
+async function handleShowSearch() {
+    const query = document.getElementById('show-search').value.trim();
+    if (!query) {
+        alert('Please enter a show name to search');
+        return;
+    }
+
+    const resultsContainer = document.getElementById('search-results');
+    const loadingEl = document.getElementById('search-loading');
+
+    // Show loading
+    resultsContainer.classList.add('hidden');
+    loadingEl.classList.remove('hidden');
+
+    try {
+        const results = await TV_API.searchShows(query);
+
+        loadingEl.classList.add('hidden');
+
+        if (results.length === 0) {
+            resultsContainer.innerHTML = '<p class="no-results">No shows found. Try a different search term.</p>';
+            resultsContainer.classList.remove('hidden');
+            return;
+        }
+
+        // Render search results
+        resultsContainer.innerHTML = results.slice(0, 5).map(show => `
+            <div class="search-result-item" data-show-id="${show.id}">
+                <div class="search-result-info">
+                    <span class="search-result-title">${escapeHtml(show.name)}</span>
+                    <span class="search-result-meta">
+                        ${show.premiered ? show.premiered : 'Unknown year'}
+                        ${show.genres.length > 0 ? ' · ' + show.genres.slice(0, 2).join(', ') : ''}
+                    </span>
+                </div>
+                <button class="btn btn-secondary btn-small" onclick="selectShowFromSearch(${show.id}, '${escapeHtml(show.name).replace(/'/g, "\\'")}')">
+                    Select
+                </button>
+            </div>
+        `).join('');
+
+        resultsContainer.classList.remove('hidden');
+    } catch (error) {
+        loadingEl.classList.add('hidden');
+        resultsContainer.innerHTML = '<p class="search-error">Search failed. Please try again.</p>';
+        resultsContainer.classList.remove('hidden');
+    }
+}
+
+async function selectShowFromSearch(showId, showName) {
+    const resultsContainer = document.getElementById('search-results');
+    const loadingEl = document.getElementById('search-loading');
+
+    // Show loading
+    resultsContainer.classList.add('hidden');
+    loadingEl.textContent = 'Loading episodes...';
+    loadingEl.classList.remove('hidden');
+
+    try {
+        const showDetails = await TV_API.getShowDetails(showId);
+
+        loadingEl.classList.add('hidden');
+
+        // Store streaming info for when show is saved
+        pendingShowData = {
+            network: showDetails.network,
+            webChannel: showDetails.webChannel,
+            streamingServices: showDetails.streamingServices
+        };
+
+        // Fill in the form
+        document.getElementById('show-title').value = showDetails.name;
+
+        // Clear and populate episodes
+        const container = document.getElementById('episodes-input');
+        container.innerHTML = '';
+
+        showDetails.episodes.forEach(ep => {
+            const episodeDiv = document.createElement('div');
+            episodeDiv.className = 'episode-input-row';
+            episodeDiv.innerHTML = `
+                <input type="number" placeholder="S" min="1" class="ep-season" value="${ep.season}" required>
+                <input type="number" placeholder="E" min="1" class="ep-number" value="${ep.episodeNumber}" required>
+                <input type="text" placeholder="Title (optional)" class="ep-title" value="${escapeHtml(ep.title)}">
+                <input type="number" placeholder="Min" min="1" class="ep-runtime" value="${ep.runtime}" required>
+                <button type="button" class="btn-remove" onclick="this.parentElement.remove()">&times;</button>
+            `;
+            container.appendChild(episodeDiv);
+        });
+
+        // Build streaming info message
+        let streamingMsg = '';
+        if (showDetails.streamingServices && showDetails.streamingServices.length > 0) {
+            const serviceNames = showDetails.streamingServices
+                .map(id => STREAMING_SERVICES.find(s => s.id === id))
+                .filter(s => s)
+                .map(s => s.name);
+            if (serviceNames.length > 0) {
+                streamingMsg = `<br>Available on: ${serviceNames.join(', ')}`;
+            }
+        }
+
+        // Show success message
+        resultsContainer.innerHTML = `
+            <div class="search-success">
+                Loaded ${showDetails.totalEpisodes} episodes across ${showDetails.totalSeasons} seasons.${streamingMsg}
+                <br>Review below and click "Save Show" when ready.
+            </div>
+        `;
+        resultsContainer.classList.remove('hidden');
+
+    } catch (error) {
+        loadingEl.classList.add('hidden');
+        resultsContainer.innerHTML = '<p class="search-error">Failed to load show details. Please try again.</p>';
+        resultsContainer.classList.remove('hidden');
+    }
 }
 
 function addEpisodeInput() {
@@ -522,7 +808,16 @@ function handleAddShow(e) {
         return;
     }
 
-    addShow({ title, episodes });
+    // Build show object with streaming info if available
+    const showData = { title, episodes };
+    if (pendingShowData) {
+        showData.network = pendingShowData.network;
+        showData.webChannel = pendingShowData.webChannel;
+        showData.streamingServices = pendingShowData.streamingServices;
+    }
+
+    addShow(showData);
+    pendingShowData = null; // Clear pending data
     closeAllModals();
     renderShowsList();
 }

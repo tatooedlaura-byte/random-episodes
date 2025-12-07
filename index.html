@@ -14,6 +14,7 @@
             <button class="tab" data-tab="picker">Randomize</button>
             <button class="tab" data-tab="couch-potato">Couch Potato</button>
             <button class="tab" data-tab="history">History</button>
+            <button class="tab" data-tab="settings">Settings</button>
         </nav>
 
         <!-- Shows Tab -->
@@ -86,6 +87,35 @@
             </div>
         </div>
 
+        <!-- Settings Tab -->
+        <div id="settings-tab" class="tab-content">
+            <div class="header">
+                <h1>Settings</h1>
+            </div>
+            <div class="settings-container">
+                <div class="settings-section">
+                    <h2>My Streaming Services</h2>
+                    <p class="settings-help">Select the streaming services you have access to. When you pick an episode, we'll tell you where to watch it.</p>
+                    <div id="streaming-services" class="streaming-services">
+                        <!-- Services will be rendered here -->
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h2>Backup & Restore</h2>
+                    <p class="settings-help">Export your data to a file for backup, or import a previous backup to restore your shows and settings.</p>
+                    <div class="backup-actions">
+                        <button id="export-data-btn" class="btn btn-primary">Export Data</button>
+                        <label class="btn btn-secondary import-btn">
+                            Import Data
+                            <input type="file" id="import-data-input" accept=".json" hidden>
+                        </label>
+                    </div>
+                    <p id="backup-status" class="backup-status hidden"></p>
+                </div>
+            </div>
+        </div>
+
         <!-- Show Detail Modal -->
         <div id="show-detail-modal" class="modal hidden">
             <div class="modal-content">
@@ -112,6 +142,27 @@
                     <button class="close-modal">&times;</button>
                 </div>
                 <div class="modal-body">
+                    <!-- Search Section -->
+                    <div class="search-section">
+                        <div class="form-group">
+                            <label for="show-search">Search for a Show</label>
+                            <div class="search-input-wrapper">
+                                <input type="text" id="show-search" placeholder="e.g. Breaking Bad, The Office...">
+                                <button type="button" id="search-btn" class="btn btn-primary">Search</button>
+                            </div>
+                        </div>
+                        <div id="search-results" class="search-results hidden">
+                            <!-- Search results will appear here -->
+                        </div>
+                        <div id="search-loading" class="search-loading hidden">
+                            Searching...
+                        </div>
+                    </div>
+
+                    <div class="divider">
+                        <span>or add manually</span>
+                    </div>
+
                     <form id="add-show-form">
                         <div class="form-group">
                             <label for="show-title">Show Title</label>
@@ -140,6 +191,7 @@
 
     <script src="data.js"></script>
     <script src="helpers.js"></script>
+    <script src="api.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
