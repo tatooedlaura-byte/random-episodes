@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Episode Picker</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Navigation Tabs -->
+        <nav class="tabs">
+            <button class="tab active" data-tab="shows">Shows</button>
+            <button class="tab" data-tab="picker">Randomize</button>
+            <button class="tab" data-tab="couch-potato">Couch Potato</button>
+            <button class="tab" data-tab="history">History</button>
+        </nav>
+
+        <!-- Shows Tab -->
+        <div id="shows-tab" class="tab-content active">
+            <div class="header">
+                <h1>My Shows</h1>
+                <button id="add-show-btn" class="btn btn-primary">+ Add Show</button>
+            </div>
+            <div id="shows-list" class="shows-list">
+                <!-- Shows will be rendered here -->
+            </div>
+        </div>
+
+        <!-- Random Picker Tab -->
+        <div id="picker-tab" class="tab-content">
+            <div class="picker-container">
+                <h1>Random Episode Picker</h1>
+                <div id="picked-episode" class="picked-episode hidden">
+                    <!-- Selected episode will appear here -->
+                </div>
+                <p id="no-episodes-msg" class="info-message hidden">No unwatched episodes available!</p>
+                <button id="randomize-btn" class="btn btn-large btn-primary">Randomize!</button>
+            </div>
+        </div>
+
+        <!-- Couch Potato Mode Tab -->
+        <div id="couch-potato-tab" class="tab-content">
+            <div class="couch-potato-container">
+                <h1>Couch Potato Mode</h1>
+                <div class="duration-settings">
+                    <label>Watch Duration:</label>
+                    <div class="duration-options">
+                        <button class="duration-btn" data-minutes="120">2 Hours</button>
+                        <button class="duration-btn active" data-minutes="360">6 Hours</button>
+                        <button class="duration-btn" data-minutes="240">4 Hours</button>
+                        <div class="custom-duration">
+                            <input type="number" id="custom-minutes" placeholder="Custom" min="30">
+                            <span>min</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="queue-actions">
+                    <button id="build-queue-btn" class="btn btn-primary">Build Queue</button>
+                    <button id="rebuild-queue-btn" class="btn btn-secondary hidden">Rebuild Queue</button>
+                </div>
+                <div id="binge-queue" class="binge-queue hidden">
+                    <h2>Your Binge Queue</h2>
+                    <div id="queue-list" class="queue-list">
+                        <!-- Queue items will appear here -->
+                    </div>
+                    <div class="queue-footer">
+                        <div id="total-runtime" class="total-runtime"></div>
+                        <button id="start-watching-btn" class="btn btn-primary">Start Watching</button>
+                    </div>
+                </div>
+                <div id="now-watching" class="now-watching hidden">
+                    <!-- Current episode being watched -->
+                </div>
+            </div>
+        </div>
+
+        <!-- History Tab -->
+        <div id="history-tab" class="tab-content">
+            <div class="header">
+                <h1>Watch History</h1>
+                <button id="clear-history-btn" class="btn btn-secondary">Clear History</button>
+            </div>
+            <div id="history-list" class="history-list">
+                <!-- History will be rendered here -->
+            </div>
+        </div>
+
+        <!-- Show Detail Modal -->
+        <div id="show-detail-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modal-show-title"></h2>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div id="episode-list" class="episode-list">
+                        <!-- Episodes will be rendered here -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="delete-show-btn" class="btn btn-danger">Delete Show</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Show Modal -->
+        <div id="add-show-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Add New Show</h2>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="add-show-form">
+                        <div class="form-group">
+                            <label for="show-title">Show Title</label>
+                            <input type="text" id="show-title" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Episodes</label>
+                            <p class="form-help">Add episodes manually or use quick add below</p>
+                            <div class="quick-add">
+                                <input type="number" id="num-seasons" placeholder="Seasons" min="1">
+                                <input type="number" id="eps-per-season" placeholder="Eps/Season" min="1">
+                                <input type="number" id="runtime" placeholder="Runtime (min)" min="1">
+                                <button type="button" id="quick-add-btn" class="btn btn-secondary">Quick Add</button>
+                            </div>
+                            <div id="episodes-input" class="episodes-input">
+                                <!-- Episode inputs will be added here -->
+                            </div>
+                            <button type="button" id="add-episode-btn" class="btn btn-secondary">+ Add Episode</button>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Show</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="helpers.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
