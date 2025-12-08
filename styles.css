@@ -210,6 +210,9 @@ body {
 
 .show-streaming {
     margin-bottom: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
 }
 
 .streaming-badge {
@@ -1066,6 +1069,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-wrap: wrap;
     gap: 8px;
     margin: 16px 0;
     padding: 12px;

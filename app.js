@@ -92,9 +92,11 @@ function renderShowsList() {
                     <h3 class="show-title">${escapeHtml(show.title)}</h3>
                     <span class="show-progress-text">${progress.watched}/${progress.total} episodes</span>
                 </div>
-                ${whereToWatch ? `
+                ${whereToWatch.length > 0 ? `
                     <div class="show-streaming">
-                        <span class="streaming-badge" style="--service-color: ${whereToWatch.color}">${whereToWatch.name}</span>
+                        ${whereToWatch.map(service => `
+                            <span class="streaming-badge" style="--service-color: ${service.color}">${service.name}</span>
+                        `).join('')}
                     </div>
                 ` : ''}
                 <div class="progress-bar">
@@ -147,10 +149,12 @@ function handleRandomize() {
                 <span class="episode-title">${escapeHtml(episode.title)}</span>
                 <span class="episode-runtime">${formatRuntime(episode.runtime)}</span>
             </div>
-            ${whereToWatch ? `
+            ${whereToWatch.length > 0 ? `
                 <div class="where-to-watch">
                     <span class="watch-label">Watch on:</span>
-                    <span class="watch-service" style="--service-color: ${whereToWatch.color}">${whereToWatch.name}</span>
+                    ${whereToWatch.map(service => `
+                        <span class="watch-service" style="--service-color: ${service.color}">${service.name}</span>
+                    `).join('')}
                 </div>
             ` : ''}
             <button class="btn btn-primary mark-watched-btn"
@@ -176,30 +180,30 @@ function handleRandomize() {
 
 /**
  * Get where to watch a show based on user's streaming services
- * Only returns a service if the user has it selected
+ * Returns all matching services the user has selected
  * @param {Object} show - Show object
- * @returns {Object|null} Streaming service info or null
+ * @returns {Array} Array of streaming service objects (empty if no matches)
  */
 function getWhereToWatch(show) {
     const settings = getSettings();
     const userServices = settings.streamingServices || [];
 
     if (!show.streamingServices || show.streamingServices.length === 0) {
-        return null;
+        return [];
     }
 
-    // Only return a service if the user has it selected
+    // Return all services the user has selected
+    const matchingServices = [];
     for (const serviceId of show.streamingServices) {
         if (userServices.includes(serviceId)) {
             const service = STREAMING_SERVICES.find(s => s.id === serviceId);
             if (service) {
-                return service;
+                matchingServices.push(service);
             }
         }
     }
 
-    // No match with user's services - return null (don't show anything)
-    return null;
+    return matchingServices;
 }
 
 // ============================================
@@ -323,7 +327,7 @@ function renderNowWatching() {
 
     // Get streaming info for current episode's show
     const show = getShowById(episode.showId);
-    const whereToWatch = show ? getWhereToWatch(show) : null;
+    const whereToWatch = show ? getWhereToWatch(show) : [];
 
     document.getElementById('now-watching').innerHTML = `
         <div class="now-watching-card">
@@ -334,10 +338,12 @@ function renderNowWatching() {
                 <span class="episode-title">${escapeHtml(episode.episodeTitle)}</span>
                 <span class="episode-runtime">${formatRuntime(episode.runtime)}</span>
             </div>
-            ${whereToWatch ? `
+            ${whereToWatch.length > 0 ? `
                 <div class="where-to-watch">
                     <span class="watch-label">Watch on:</span>
-                    <span class="watch-service" style="--service-color: ${whereToWatch.color}">${whereToWatch.name}</span>
+                    ${whereToWatch.map(service => `
+                        <span class="watch-service" style="--service-color: ${service.color}">${service.name}</span>
+                    `).join('')}
                 </div>
             ` : ''}
             <div class="now-actions">
