@@ -21,7 +21,8 @@ const STORAGE_KEYS = {
 // ============================================
 const DEFAULT_SETTINGS = {
     couchPotatoDuration: 360, // Default 6 hours in minutes
-    streamingServices: [] // User's streaming services
+    streamingServices: [], // User's streaming services
+    customServices: [] // User-defined streaming services (e.g., Plex, local drives)
 };
 
 // ============================================
@@ -47,6 +48,53 @@ const STREAMING_SERVICES = [
     { id: 'network', name: 'Network TV', color: '#666666' },
     { id: 'cable', name: 'Cable TV', color: '#666666' }
 ];
+
+/**
+ * Get all streaming services (built-in + custom)
+ * @returns {Array} Combined array of all services
+ */
+function getAllStreamingServices() {
+    const settings = getSettings();
+    const customServices = settings.customServices || [];
+    return [...STREAMING_SERVICES, ...customServices];
+}
+
+/**
+ * Add a custom streaming service
+ * @param {string} name - Service name (e.g., "Plex", "My NAS")
+ * @param {string} color - Hex color for the badge
+ * @returns {Object} The created service
+ */
+function addCustomService(name, color = '#8B5CF6') {
+    const settings = getSettings();
+    const customServices = settings.customServices || [];
+
+    const newService = {
+        id: 'custom_' + generateId(),
+        name: name,
+        color: color,
+        isCustom: true
+    };
+
+    customServices.push(newService);
+    updateSettings({ customServices });
+
+    return newService;
+}
+
+/**
+ * Delete a custom streaming service
+ * @param {string} serviceId - The service ID to delete
+ */
+function deleteCustomService(serviceId) {
+    const settings = getSettings();
+    const customServices = (settings.customServices || []).filter(s => s.id !== serviceId);
+    updateSettings({ customServices });
+
+    // Also remove from user's selected services
+    const selectedServices = (settings.streamingServices || []).filter(id => id !== serviceId);
+    updateSettings({ streamingServices: selectedServices });
+}
 
 // ============================================
 // DATA ACCESS FUNCTIONS

@@ -102,6 +102,19 @@
                 </div>
 
                 <div class="settings-section">
+                    <h2>Custom Services</h2>
+                    <p class="settings-help">Add your own services like Plex, local drives, or DVDs.</p>
+                    <div class="add-custom-service">
+                        <input type="text" id="custom-service-name" placeholder="Service name (e.g., Plex)">
+                        <input type="color" id="custom-service-color" value="#8B5CF6">
+                        <button id="add-custom-service-btn" class="btn btn-primary">Add</button>
+                    </div>
+                    <div id="custom-services-list" class="custom-services-list">
+                        <!-- Custom services will be rendered here -->
+                    </div>
+                </div>
+
+                <div class="settings-section">
                     <h2>Backup & Restore</h2>
                     <p class="settings-help">Export your data to a file for backup, or import a previous backup to restore your shows and settings.</p>
                     <div class="backup-actions">
@@ -124,8 +137,18 @@
                     <button class="close-modal">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <div id="episode-list" class="episode-list">
-                        <!-- Episodes will be rendered here -->
+                    <div class="show-services-section">
+                        <h3>Available On</h3>
+                        <p class="settings-help">Select where this show is available to watch.</p>
+                        <div id="show-services-list" class="show-services-list">
+                            <!-- Services checkboxes will be rendered here -->
+                        </div>
+                    </div>
+                    <div class="episodes-section">
+                        <h3>Episodes</h3>
+                        <div id="episode-list" class="episode-list">
+                            <!-- Episodes will be rendered here -->
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">

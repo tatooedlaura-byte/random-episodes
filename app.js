@@ -187,6 +187,7 @@ function handleRandomize() {
 function getWhereToWatch(show) {
     const settings = getSettings();
     const userServices = settings.streamingServices || [];
+    const allServices = getAllStreamingServices();
 
     if (!show.streamingServices || show.streamingServices.length === 0) {
         return [];
@@ -196,7 +197,7 @@ function getWhereToWatch(show) {
     const matchingServices = [];
     for (const serviceId of show.streamingServices) {
         if (userServices.includes(serviceId)) {
-            const service = STREAMING_SERVICES.find(s => s.id === serviceId);
+            const service = allServices.find(s => s.id === serviceId);
             if (service) {
                 matchingServices.push(service);
             }
@@ -470,6 +471,18 @@ function initializeSettings() {
 
     // Import file input
     document.getElementById('import-data-input').addEventListener('change', handleImportData);
+
+    // Custom services
+    document.getElementById('add-custom-service-btn').addEventListener('click', handleAddCustomService);
+    document.getElementById('custom-service-name').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleAddCustomService();
+        }
+    });
+
+    // Initial render of custom services
+    renderCustomServices();
 }
 
 function handleExportData() {
@@ -532,8 +545,9 @@ function renderStreamingServices() {
     const container = document.getElementById('streaming-services');
     const settings = getSettings();
     const userServices = settings.streamingServices || [];
+    const allServices = getAllStreamingServices();
 
-    container.innerHTML = STREAMING_SERVICES.map(service => {
+    container.innerHTML = allServices.map(service => {
         const isSelected = userServices.includes(service.id);
         return `
             <label class="streaming-service-item ${isSelected ? 'selected' : ''}"
@@ -542,7 +556,7 @@ function renderStreamingServices() {
                        value="${service.id}"
                        ${isSelected ? 'checked' : ''}
                        onchange="handleServiceToggle('${service.id}', this.checked)">
-                <span class="service-name">${service.name}</span>
+                <span class="service-name">${service.name}${service.isCustom ? ' (Custom)' : ''}</span>
             </label>
         `;
     }).join('');
@@ -562,6 +576,66 @@ function handleServiceToggle(serviceId, isChecked) {
 
     updateSettings({ streamingServices: services });
     renderStreamingServices();
+}
+
+function handleAddCustomService() {
+    const nameInput = document.getElementById('custom-service-name');
+    const colorInput = document.getElementById('custom-service-color');
+
+    const name = nameInput.value.trim();
+    if (!name) {
+        alert('Please enter a service name');
+        return;
+    }
+
+    const color = colorInput.value;
+    const newService = addCustomService(name, color);
+
+    // Auto-select the new service
+    const settings = getSettings();
+    const services = settings.streamingServices || [];
+    if (!services.includes(newService.id)) {
+        services.push(newService.id);
+        updateSettings({ streamingServices: services });
+    }
+
+    // Clear inputs
+    nameInput.value = '';
+    colorInput.value = '#8B5CF6';
+
+    // Re-render
+    renderCustomServices();
+    renderStreamingServices();
+}
+
+function renderCustomServices() {
+    const container = document.getElementById('custom-services-list');
+    const settings = getSettings();
+    const customServices = settings.customServices || [];
+
+    if (customServices.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">No custom services added yet.</p>';
+        return;
+    }
+
+    container.innerHTML = customServices.map(service => `
+        <div class="custom-service-item">
+            <div class="custom-service-info">
+                <span class="custom-service-color" style="background: ${service.color}"></span>
+                <span class="custom-service-name">${escapeHtml(service.name)}</span>
+            </div>
+            <button class="custom-service-delete" onclick="handleDeleteCustomService('${service.id}')" title="Delete service">&times;</button>
+        </div>
+    `).join('');
+}
+
+function handleDeleteCustomService(serviceId) {
+    if (confirm('Delete this custom service? It will also be removed from any shows using it.')) {
+        deleteCustomService(serviceId);
+        renderCustomServices();
+        renderStreamingServices();
+        renderShowsList();
+    }
 }
 
 // ============================================
@@ -851,8 +925,51 @@ function openShowDetailModal(showId) {
     if (!show) return;
 
     document.getElementById('modal-show-title').textContent = show.title;
+    renderShowServices(show);
     renderEpisodeList(show);
     document.getElementById('show-detail-modal').classList.remove('hidden');
+}
+
+function renderShowServices(show) {
+    const container = document.getElementById('show-services-list');
+    const allServices = getAllStreamingServices();
+    const showServices = show.streamingServices || [];
+
+    container.innerHTML = allServices.map(service => {
+        const isSelected = showServices.includes(service.id);
+        return `
+            <label class="show-service-item ${isSelected ? 'selected' : ''}"
+                   style="--service-color: ${service.color}">
+                <input type="checkbox"
+                       value="${service.id}"
+                       ${isSelected ? 'checked' : ''}
+                       onchange="handleShowServiceToggle('${show.id}', '${service.id}', this.checked)">
+                <span>${escapeHtml(service.name)}</span>
+            </label>
+        `;
+    }).join('');
+}
+
+function handleShowServiceToggle(showId, serviceId, isChecked) {
+    const show = getShowById(showId);
+    if (!show) return;
+
+    let services = show.streamingServices || [];
+
+    if (isChecked) {
+        if (!services.includes(serviceId)) {
+            services.push(serviceId);
+        }
+    } else {
+        services = services.filter(id => id !== serviceId);
+    }
+
+    updateShow(showId, { streamingServices: services });
+
+    // Re-render to update UI
+    const updatedShow = getShowById(showId);
+    renderShowServices(updatedShow);
+    renderShowsList();
 }
 
 function renderEpisodeList(show) {
