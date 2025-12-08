@@ -85,12 +85,18 @@ function renderShowsList() {
 
     container.innerHTML = shows.map(show => {
         const progress = calculateShowProgress(show);
+        const whereToWatch = getWhereToWatch(show);
         return `
             <div class="show-card" data-show-id="${show.id}">
                 <div class="show-info">
                     <h3 class="show-title">${escapeHtml(show.title)}</h3>
                     <span class="show-progress-text">${progress.watched}/${progress.total} episodes</span>
                 </div>
+                ${whereToWatch ? `
+                    <div class="show-streaming">
+                        <span class="streaming-badge" style="--service-color: ${whereToWatch.color}">${whereToWatch.name}</span>
+                    </div>
+                ` : ''}
                 <div class="progress-bar">
                     <div class="progress-fill" style="width: ${progress.percentage}%"></div>
                 </div>
@@ -319,6 +325,10 @@ function renderNowWatching() {
     const remaining = currentQueue.episodes.slice(currentQueueIndex + 1);
     const remainingRuntime = remaining.reduce((sum, ep) => sum + ep.runtime, 0);
 
+    // Get streaming info for current episode's show
+    const show = getShowById(episode.showId);
+    const whereToWatch = show ? getWhereToWatch(show) : null;
+
     document.getElementById('now-watching').innerHTML = `
         <div class="now-watching-card">
             <span class="now-label">Now Watching</span>
@@ -328,6 +338,12 @@ function renderNowWatching() {
                 <span class="episode-title">${escapeHtml(episode.episodeTitle)}</span>
                 <span class="episode-runtime">${formatRuntime(episode.runtime)}</span>
             </div>
+            ${whereToWatch ? `
+                <div class="where-to-watch">
+                    <span class="watch-label">Watch on:</span>
+                    <span class="watch-service" style="--service-color: ${whereToWatch.color}">${whereToWatch.name}</span>
+                </div>
+            ` : ''}
             <div class="now-actions">
                 <button class="btn btn-primary" id="mark-queue-watched-btn">
                     Mark Watched & Next
