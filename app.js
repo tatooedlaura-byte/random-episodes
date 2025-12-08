@@ -176,6 +176,7 @@ function handleRandomize() {
 
 /**
  * Get where to watch a show based on user's streaming services
+ * Only returns a service if the user has it selected
  * @param {Object} show - Show object
  * @returns {Object|null} Streaming service info or null
  */
@@ -187,7 +188,7 @@ function getWhereToWatch(show) {
         return null;
     }
 
-    // Find first match between show's services and user's services
+    // Only return a service if the user has it selected
     for (const serviceId of show.streamingServices) {
         if (userServices.includes(serviceId)) {
             const service = STREAMING_SERVICES.find(s => s.id === serviceId);
@@ -197,12 +198,7 @@ function getWhereToWatch(show) {
         }
     }
 
-    // No match - show where it's available anyway
-    const firstService = STREAMING_SERVICES.find(s => s.id === show.streamingServices[0]);
-    if (firstService) {
-        return { ...firstService, notSubscribed: true };
-    }
-
+    // No match with user's services - return null (don't show anything)
     return null;
 }
 
