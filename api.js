@@ -30,6 +30,26 @@ const TMDB_PROVIDER_MAP = {
     1899: 'espn',        // ESPN+
 };
 
+// Direct search URLs for streaming services
+const STREAMING_SEARCH_URLS = {
+    netflix: (name) => `https://www.netflix.com/search?q=${encodeURIComponent(name)}`,
+    hulu: (name) => `https://www.hulu.com/search?q=${encodeURIComponent(name)}`,
+    hbo: (name) => `https://play.max.com/search?q=${encodeURIComponent(name)}`,
+    prime: (name) => `https://www.amazon.com/s?k=${encodeURIComponent(name)}&i=instant-video`,
+    disney: (name) => `https://www.disneyplus.com/search?q=${encodeURIComponent(name)}`,
+    apple: (name) => `https://tv.apple.com/search?term=${encodeURIComponent(name)}`,
+    paramount: (name) => `https://www.paramountplus.com/search/?q=${encodeURIComponent(name)}`,
+    peacock: (name) => `https://www.peacocktv.com/search?q=${encodeURIComponent(name)}`,
+    showtime: (name) => `https://www.sho.com/search?q=${encodeURIComponent(name)}`,
+    starz: (name) => `https://www.starz.com/search?q=${encodeURIComponent(name)}`,
+    amc: (name) => `https://www.amcplus.com/search?q=${encodeURIComponent(name)}`,
+    discovery: (name) => `https://www.discoveryplus.com/search?q=${encodeURIComponent(name)}`,
+    tubi: (name) => `https://tubitv.com/search/${encodeURIComponent(name)}`,
+    pluto: (name) => `https://pluto.tv/search/details/${encodeURIComponent(name)}`,
+    crunchyroll: (name) => `https://www.crunchyroll.com/search?q=${encodeURIComponent(name)}`,
+    espn: (name) => `https://www.espn.com/search/_/q/${encodeURIComponent(name)}`,
+};
+
 const TV_API = {
     BASE_URL: 'https://api.tvmaze.com',
 
@@ -147,9 +167,6 @@ const TV_API = {
             const streamingLinks = {};
             const seenServices = new Set();
 
-            // TMDB provides a direct link to JustWatch page for the show
-            const justWatchLink = usProviders.link || null;
-
             // Combine flatrate (subscription) and free providers
             const allProviders = [
                 ...(usProviders.flatrate || []),
@@ -161,9 +178,10 @@ const TV_API = {
                 if (ourServiceId && !seenServices.has(ourServiceId)) {
                     seenServices.add(ourServiceId);
                     serviceIds.push(ourServiceId);
-                    // Store JustWatch link for each service (they all go to the same page)
-                    if (justWatchLink) {
-                        streamingLinks[ourServiceId] = justWatchLink;
+                    // Generate direct search URL for this streaming service
+                    const urlGenerator = STREAMING_SEARCH_URLS[ourServiceId];
+                    if (urlGenerator) {
+                        streamingLinks[ourServiceId] = urlGenerator(showName);
                     }
                 }
             }
