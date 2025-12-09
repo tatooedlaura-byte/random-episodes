@@ -1,36 +1,37 @@
 /**
  * TV Show API Integration
  * Uses TVMaze API for show/episode data
- * Uses WatchMode API for real streaming availability
+ * Uses TMDB API for streaming availability (free, powered by JustWatch)
  */
 
-// WatchMode API key
-const WATCHMODE_API_KEY = 'KcfQmPYFnR68GNF0xWxfu6Wz5qtJzN5BnQMHSfRw';
+// TMDB API key (free tier) - Get yours at https://www.themoviedb.org/settings/api
+const TMDB_API_KEY = 'd3d28539474495cbde497609b69bad79';
+const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 
-// Map WatchMode source IDs to our internal service IDs
-const WATCHMODE_SOURCE_MAP = {
-    203: 'netflix',      // Netflix
-    157: 'hulu',         // Hulu
-    387: 'hbo',          // Max (HBO)
-    26: 'prime',         // Prime Video
-    372: 'disney',       // Disney+
-    371: 'apple',        // Apple TV+
-    444: 'paramount',    // Paramount+
-    389: 'peacock',      // Peacock Premium
-    388: 'peacock',      // Peacock (free)
-    368: 'showtime',     // Showtime
-    232: 'starz',        // Starz
-    78: 'amc',           // AMC+
-    403: 'discovery',    // Discovery+
-    390: 'espn',         // ESPN+
+// Map TMDB provider IDs to our internal service IDs
+// Full list: https://developer.themoviedb.org/reference/watch-providers-tv-list
+const TMDB_PROVIDER_MAP = {
+    8: 'netflix',        // Netflix
+    15: 'hulu',          // Hulu
+    384: 'hbo',          // Max (HBO)
+    9: 'prime',          // Prime Video
+    337: 'disney',       // Disney+
+    350: 'apple',        // Apple TV+
+    531: 'paramount',    // Paramount+
+    386: 'peacock',      // Peacock
+    37: 'showtime',      // Showtime
+    43: 'starz',         // Starz
+    526: 'amc',          // AMC+
+    520: 'discovery',    // Discovery+
+    2077: 'discovery',   // Discovery+ (alternate ID)
     73: 'tubi',          // Tubi
     300: 'pluto',        // Pluto TV
     283: 'crunchyroll',  // Crunchyroll
+    1899: 'espn',        // ESPN+
 };
 
 const TV_API = {
     BASE_URL: 'https://api.tvmaze.com',
-    WATCHMODE_URL: 'https://api.watchmode.com/v1',
 
     /**
      * Search for TV shows by name
@@ -98,75 +99,64 @@ const TV_API = {
     },
 
     /**
-     * Get streaming availability from WatchMode API
-     * @param {string} imdbId - IMDB ID of the show
-     * @param {string} showName - Show name (fallback for search)
+     * Get streaming availability from TMDB API (powered by JustWatch)
+     * @param {string} showName - Show name to search for
      * @returns {Promise<Array>} Array of streaming service IDs
      */
-    async getStreamingAvailability(imdbId, showName) {
+    async getStreamingAvailability(showName) {
         try {
-            let titleId = null;
+            // First, search TMDB for the show
+            const searchResponse = await fetch(
+                `${TMDB_BASE_URL}/search/tv?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(showName)}`
+            );
 
-            // First, try to get WatchMode title ID from IMDB ID
-            if (imdbId) {
-                const searchResponse = await fetch(
-                    `${this.WATCHMODE_URL}/search/?apiKey=${WATCHMODE_API_KEY}&search_field=imdb_id&search_value=${imdbId}`
-                );
-
-                if (searchResponse.ok) {
-                    const searchResults = await searchResponse.json();
-                    if (searchResults.title_results && searchResults.title_results.length > 0) {
-                        titleId = searchResults.title_results[0].id;
-                    }
-                }
+            if (!searchResponse.ok) {
+                throw new Error('TMDB search failed');
             }
 
-            // If no IMDB ID or not found, search by name
-            if (!titleId && showName) {
-                const searchResponse = await fetch(
-                    `${this.WATCHMODE_URL}/search/?apiKey=${WATCHMODE_API_KEY}&search_field=name&search_value=${encodeURIComponent(showName)}&types=tv`
-                );
-
-                if (searchResponse.ok) {
-                    const searchResults = await searchResponse.json();
-                    if (searchResults.title_results && searchResults.title_results.length > 0) {
-                        // Try to find exact match first
-                        const exactMatch = searchResults.title_results.find(
-                            r => r.name.toLowerCase() === showName.toLowerCase()
-                        );
-                        titleId = exactMatch ? exactMatch.id : searchResults.title_results[0].id;
-                    }
-                }
-            }
-
-            if (!titleId) {
-                console.log('Could not find WatchMode title ID for:', showName);
+            const searchResults = await searchResponse.json();
+            if (!searchResults.results || searchResults.results.length === 0) {
+                console.log('Could not find show on TMDB:', showName);
                 return [];
             }
 
-            // Get streaming sources for the title
-            const sourcesResponse = await fetch(
-                `${this.WATCHMODE_URL}/title/${titleId}/sources/?apiKey=${WATCHMODE_API_KEY}&regions=US`
+            // Find best match (prefer exact match)
+            const exactMatch = searchResults.results.find(
+                r => r.name.toLowerCase() === showName.toLowerCase()
+            );
+            const tmdbId = exactMatch ? exactMatch.id : searchResults.results[0].id;
+
+            // Get watch providers for the show
+            const providersResponse = await fetch(
+                `${TMDB_BASE_URL}/tv/${tmdbId}/watch/providers?api_key=${TMDB_API_KEY}`
             );
 
-            if (!sourcesResponse.ok) {
-                throw new Error('Failed to fetch streaming sources');
+            if (!providersResponse.ok) {
+                throw new Error('Failed to fetch watch providers');
             }
 
-            const sources = await sourcesResponse.json();
+            const providersData = await providersResponse.json();
 
-            // Filter to subscription services and map to our IDs
+            // Get US providers (flatrate = subscription, free = free with ads)
+            const usProviders = providersData.results?.US;
+            if (!usProviders) {
+                return [];
+            }
+
             const streamingServices = [];
             const seenServices = new Set();
 
-            for (const source of sources) {
-                // Only include subscription/free streaming (not rent/buy)
-                if (source.type === 'sub' || source.type === 'free') {
-                    const ourServiceId = WATCHMODE_SOURCE_MAP[source.source_id];
-                    if (ourServiceId && !seenServices.has(ourServiceId)) {
-                        seenServices.add(ourServiceId);
-                        streamingServices.push(ourServiceId);
-                    }
+            // Combine flatrate (subscription) and free providers
+            const allProviders = [
+                ...(usProviders.flatrate || []),
+                ...(usProviders.free || [])
+            ];
+
+            for (const provider of allProviders) {
+                const ourServiceId = TMDB_PROVIDER_MAP[provider.provider_id];
+                if (ourServiceId && !seenServices.has(ourServiceId)) {
+                    seenServices.add(ourServiceId);
+                    streamingServices.push(ourServiceId);
                 }
             }
 
@@ -205,16 +195,12 @@ const TV_API = {
                 seasons[ep.season].push(ep);
             });
 
-            // Get IMDB ID for WatchMode lookup
-            const imdbId = show.externals?.imdb || null;
-
-            // Get real streaming availability from WatchMode
-            const streamingServices = await this.getStreamingAvailability(imdbId, show.name);
+            // Get streaming availability from TMDB
+            const streamingServices = await this.getStreamingAvailability(show.name);
 
             return {
                 id: show.id,
                 name: show.name,
-                imdbId: imdbId,
                 runtime: show.runtime || show.averageRuntime || 30,
                 totalEpisodes: episodes.length,
                 totalSeasons: Object.keys(seasons).length,
