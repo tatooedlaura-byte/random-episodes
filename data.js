@@ -140,6 +140,7 @@ function addShow(show) {
         network: show.network || null, // Original network (e.g., "AMC")
         webChannel: show.webChannel || null, // Streaming platform (e.g., "Netflix")
         streamingServices: show.streamingServices || [], // Where it's available to stream
+        streamingLinks: show.streamingLinks || {}, // Deep links to streaming services
         episodes: show.episodes.map((ep, index) => ({
             id: generateId(),
             season: ep.season,

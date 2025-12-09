@@ -101,7 +101,7 @@ const TV_API = {
     /**
      * Get streaming availability from TMDB API (powered by JustWatch)
      * @param {string} showName - Show name to search for
-     * @returns {Promise<Array>} Array of streaming service IDs
+     * @returns {Promise<Object>} Object with serviceIds array and streamingLinks map
      */
     async getStreamingAvailability(showName) {
         try {
@@ -117,7 +117,7 @@ const TV_API = {
             const searchResults = await searchResponse.json();
             if (!searchResults.results || searchResults.results.length === 0) {
                 console.log('Could not find show on TMDB:', showName);
-                return [];
+                return { serviceIds: [], streamingLinks: {} };
             }
 
             // Find best match (prefer exact match)
@@ -140,11 +140,15 @@ const TV_API = {
             // Get US providers (flatrate = subscription, free = free with ads)
             const usProviders = providersData.results?.US;
             if (!usProviders) {
-                return [];
+                return { serviceIds: [], streamingLinks: {} };
             }
 
-            const streamingServices = [];
+            const serviceIds = [];
+            const streamingLinks = {};
             const seenServices = new Set();
+
+            // TMDB provides a direct link to JustWatch page for the show
+            const justWatchLink = usProviders.link || null;
 
             // Combine flatrate (subscription) and free providers
             const allProviders = [
@@ -156,14 +160,18 @@ const TV_API = {
                 const ourServiceId = TMDB_PROVIDER_MAP[provider.provider_id];
                 if (ourServiceId && !seenServices.has(ourServiceId)) {
                     seenServices.add(ourServiceId);
-                    streamingServices.push(ourServiceId);
+                    serviceIds.push(ourServiceId);
+                    // Store JustWatch link for each service (they all go to the same page)
+                    if (justWatchLink) {
+                        streamingLinks[ourServiceId] = justWatchLink;
+                    }
                 }
             }
 
-            return streamingServices;
+            return { serviceIds, streamingLinks };
         } catch (error) {
             console.error('Error fetching streaming availability:', error);
-            return []; // Return empty array on error, don't break the flow
+            return { serviceIds: [], streamingLinks: {} }; // Return empty on error
         }
     },
 
@@ -196,7 +204,7 @@ const TV_API = {
             });
 
             // Get streaming availability from TMDB
-            const streamingServices = await this.getStreamingAvailability(show.name);
+            const { serviceIds, streamingLinks } = await this.getStreamingAvailability(show.name);
 
             return {
                 id: show.id,
@@ -207,7 +215,8 @@ const TV_API = {
                 seasons: seasons,
                 network: show.network?.name || null,
                 webChannel: show.webChannel?.name || null,
-                streamingServices: streamingServices,
+                streamingServices: serviceIds,
+                streamingLinks: streamingLinks,
                 episodes: episodes.map(ep => ({
                     season: ep.season,
                     episodeNumber: ep.number,

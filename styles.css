@@ -225,6 +225,17 @@ body {
     color: white;
 }
 
+.streaming-badge.streaming-link {
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.streaming-badge.streaming-link:hover {
+    transform: scale(1.05);
+    filter: brightness(1.1);
+}
+
 .progress-bar {
     height: 6px;
     background: var(--progress-bg);
@@ -1227,6 +1238,17 @@ body {
     padding: 4px 12px;
     background: var(--surface);
     border-radius: 20px;
+}
+
+.watch-service.watch-service-link {
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.watch-service.watch-service-link:hover {
+    transform: scale(1.05);
+    background: var(--surface-hover);
 }
 
 /* ============================================

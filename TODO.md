@@ -27,4 +27,4 @@
 
 ## Randomization Options
 - [ ] Genre filter (comedy only, drama only, etc.)
-- [ ] Deep links to streaming services (open Netflix/Hulu to the show)
+- [x] Deep links to streaming services (open Netflix/Hulu to the show)

@@ -94,9 +94,10 @@ function renderShowsList() {
                 </div>
                 ${whereToWatch.length > 0 ? `
                     <div class="show-streaming">
-                        ${whereToWatch.map(service => `
-                            <span class="streaming-badge" style="--service-color: ${service.color}">${service.name}</span>
-                        `).join('')}
+                        ${whereToWatch.map(service => service.link
+                            ? `<a href="${service.link}" target="_blank" rel="noopener" class="streaming-badge streaming-link" style="--service-color: ${service.color}" onclick="event.stopPropagation()">${service.name}</a>`
+                            : `<span class="streaming-badge" style="--service-color: ${service.color}">${service.name}</span>`
+                        ).join('')}
                     </div>
                 ` : ''}
                 <div class="progress-bar">
@@ -152,9 +153,10 @@ function handleRandomize() {
             ${whereToWatch.length > 0 ? `
                 <div class="where-to-watch">
                     <span class="watch-label">Watch on:</span>
-                    ${whereToWatch.map(service => `
-                        <span class="watch-service" style="--service-color: ${service.color}">${service.name}</span>
-                    `).join('')}
+                    ${whereToWatch.map(service => service.link
+                        ? `<a href="${service.link}" target="_blank" rel="noopener" class="watch-service watch-service-link" style="--service-color: ${service.color}">${service.name}</a>`
+                        : `<span class="watch-service" style="--service-color: ${service.color}">${service.name}</span>`
+                    ).join('')}
                 </div>
             ` : ''}
             <button class="btn btn-primary mark-watched-btn"
@@ -180,26 +182,30 @@ function handleRandomize() {
 
 /**
  * Get where to watch a show based on user's streaming services
- * Returns all matching services the user has selected
+ * Returns all matching services the user has selected, with links
  * @param {Object} show - Show object
- * @returns {Array} Array of streaming service objects (empty if no matches)
+ * @returns {Array} Array of streaming service objects with links (empty if no matches)
  */
 function getWhereToWatch(show) {
     const settings = getSettings();
     const userServices = settings.streamingServices || [];
     const allServices = getAllStreamingServices();
+    const streamingLinks = show.streamingLinks || {};
 
     if (!show.streamingServices || show.streamingServices.length === 0) {
         return [];
     }
 
-    // Return all services the user has selected
+    // Return all services the user has selected, with their links
     const matchingServices = [];
     for (const serviceId of show.streamingServices) {
         if (userServices.includes(serviceId)) {
             const service = allServices.find(s => s.id === serviceId);
             if (service) {
-                matchingServices.push(service);
+                matchingServices.push({
+                    ...service,
+                    link: streamingLinks[serviceId] || null
+                });
             }
         }
     }
@@ -342,9 +348,10 @@ function renderNowWatching() {
             ${whereToWatch.length > 0 ? `
                 <div class="where-to-watch">
                     <span class="watch-label">Watch on:</span>
-                    ${whereToWatch.map(service => `
-                        <span class="watch-service" style="--service-color: ${service.color}">${service.name}</span>
-                    `).join('')}
+                    ${whereToWatch.map(service => service.link
+                        ? `<a href="${service.link}" target="_blank" rel="noopener" class="watch-service watch-service-link" style="--service-color: ${service.color}">${service.name}</a>`
+                        : `<span class="watch-service" style="--service-color: ${service.color}">${service.name}</span>`
+                    ).join('')}
                 </div>
             ` : ''}
             <div class="now-actions">
@@ -775,7 +782,8 @@ async function selectShowFromSearch(showId, showName) {
         pendingShowData = {
             network: showDetails.network,
             webChannel: showDetails.webChannel,
-            streamingServices: showDetails.streamingServices
+            streamingServices: showDetails.streamingServices,
+            streamingLinks: showDetails.streamingLinks
         };
 
         // Fill in the form
@@ -906,6 +914,7 @@ function handleAddShow(e) {
         showData.network = pendingShowData.network;
         showData.webChannel = pendingShowData.webChannel;
         showData.streamingServices = pendingShowData.streamingServices;
+        showData.streamingLinks = pendingShowData.streamingLinks;
     }
 
     addShow(showData);
